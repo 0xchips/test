@@ -1,0 +1,205 @@
+name: Logic Apps Documentation Generator
+
+on:
+  # Disabled by default - enable by uncommenting the schedule section below
+  # schedule:
+  #   - cron: '0 8 * * 1'  # Run every Monday at 8 AM UTC (weekly)
+  workflow_dispatch:
+    inputs:
+      resourceGroup:
+        description: 'Resource Group (leave empty for all)'
+        required: false
+        type: string
+        default: 'training_jordan'
+      subscriptionId:
+        description: 'Subscription ID (leave empty for default)'
+        required: false
+        type: string
+      logicAppName:
+        description: 'Specific Logic App name (leave empty for all)'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
+
+jobs:
+  generate-documentation:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Login to Azure (Attempt 1)
+      continue-on-error: true
+      id: login1
+      uses: azure/login@v2
+      with:
+        client-id: ${{ secrets.AZURE_SENTINEL_CLIENTID_ce5a64466c464a7ba45b506fbf6d77cf }}
+        tenant-id: ${{ secrets.AZURE_SENTINEL_TENANTID_ce5a64466c464a7ba45b506fbf6d77cf }}
+        subscription-id: ${{ secrets.AZURE_SENTINEL_SUBSCRIPTIONID_ce5a64466c464a7ba45b506fbf6d77cf }}
+        enable-AzPSSession: true
+
+    - name: Wait 30 seconds if login attempt 1 failed
+      if: ${{ steps.login1.outcome=='failure' }}
+      run: sleep 30
+
+    - name: Login to Azure (Attempt 2)
+      continue-on-error: false
+      id: login2
+      uses: azure/login@v2
+      if: ${{ steps.login1.outcome=='failure' }}
+      with:
+        client-id: ${{ secrets.AZURE_SENTINEL_CLIENTID_ce5a64466c464a7ba45b506fbf6d77cf }}
+        tenant-id: ${{ secrets.AZURE_SENTINEL_TENANTID_ce5a64466c464a7ba45b506fbf6d77cf }}
+        subscription-id: ${{ secrets.AZURE_SENTINEL_SUBSCRIPTIONID_ce5a64466c464a7ba45b506fbf6d77cf }}
+        enable-AzPSSession: true
+
+    - name: Export Logic Apps from Azure
+      uses: azure/powershell@v2
+      with:
+        azPSVersion: 'latest'
+        inlineScript: |
+          # Set default parameters
+          $params = @{
+            OutputPath = "./exports/logicapps"
+            RunHistoryDays = 30
+          }
+          
+          # Use subscription ID from input or default from secrets
+          if ("${{ github.event.inputs.subscriptionId }}" -ne "") {
+            $params['SubscriptionId'] = "${{ github.event.inputs.subscriptionId }}"
+          } else {
+            $params['SubscriptionId'] = "${{ secrets.AZURE_SENTINEL_SUBSCRIPTIONID_ce5a64466c464a7ba45b506fbf6d77cf }}"
+          }
+          
+          # Use resource group from input or default
+          if ("${{ github.event.inputs.resourceGroup }}" -ne "") {
+            $params['ResourceGroupName'] = "${{ github.event.inputs.resourceGroup }}"
+          }
+          
+          # Check if specific Logic App requested
+          if ("${{ github.event.inputs.logicAppName }}" -ne "") {
+            Write-Host "Exporting specific Logic App: ${{ github.event.inputs.logicAppName }}"
+            $params['LogicAppName'] = "${{ github.event.inputs.logicAppName }}"
+            
+            # Use Test-SingleLogicApp.ps1 for single app
+            ./scripts/Test-SingleLogicApp.ps1 `
+              -LogicAppName "${{ github.event.inputs.logicAppName }}" `
+              -ResourceGroupName "${{ github.event.inputs.resourceGroup }}"
+          } else {
+            Write-Host "Exporting all Logic Apps with parameters:"
+            $params | Format-Table
+            
+            ./scripts/Export-LogicApps.ps1 @params
+          }
+
+    - name: Generate Documentation
+      shell: pwsh
+      run: |
+        Write-Host "Generating documentation from exported Logic Apps..."
+        ./scripts/Generate-LogicAppsDoc.ps1 -InputPath "./exports/logicapps" -OutputPath "./docs/logicapps"
+
+    - name: Check for changes
+      id: check_changes
+      run: |
+        git config --global user.name 'GitHub Actions Bot'
+        git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+        
+        # Check if there are any changes in docs/logicapps
+        if [[ -n $(git status --porcelain docs/logicapps) ]]; then
+          echo "changes=true" >> $GITHUB_OUTPUT
+          echo "Documentation changes detected"
+        else
+          echo "changes=false" >> $GITHUB_OUTPUT
+          echo "No documentation changes detected"
+        fi
+
+    - name: Create Pull Request
+      if: steps.check_changes.outputs.changes == 'true'
+      uses: peter-evans/create-pull-request@v6
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: |
+          docs: Update Logic Apps documentation
+          
+          Automated documentation update from Logic Apps export
+          - Export date: ${{ github.run_id }}
+          - Triggered by: ${{ github.event_name }}
+        branch: docs/logicapps-update-${{ github.run_id }}
+        delete-branch: true
+        title: '📚 Update Logic Apps Documentation'
+        body: |
+          ## Logic Apps Documentation Update
+          
+          This PR contains automatically generated documentation for Logic Apps in the tenant.
+          
+          ### Changes
+          - ✅ Exported Logic Apps definitions from Azure
+          - ✅ Generated markdown documentation
+          - ✅ Updated workflow diagrams
+          - ✅ Refreshed run history metrics
+          
+          ### Details
+          - **Workflow Run:** ${{ github.run_id }}
+          - **Triggered By:** ${{ github.event_name }}
+          - **Date:** ${{ github.event.repository.updated_at }}
+          
+          ### Review Checklist
+          - [ ] Verify all Logic Apps are documented
+          - [ ] Check for sensitive information in documentation
+          - [ ] Review workflow diagrams for accuracy
+          - [ ] Validate run history metrics
+          
+          **Note:** This is an automated PR. Please review before merging.
+        labels: |
+          documentation
+          automated
+          logic-apps
+        assignees: ${{ github.actor }}
+
+    - name: Upload documentation artifact
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: logicapps-documentation
+        path: |
+          docs/logicapps/**
+          exports/logicapps/summary.json
+        retention-days: 30
+
+    - name: Generate Summary
+      if: always()
+      run: |
+        echo "## 📚 Logic Apps Documentation Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ -f "exports/logicapps/summary.json" ]; then
+          echo "### Export Summary" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`json" >> $GITHUB_STEP_SUMMARY
+          cat exports/logicapps/summary.json >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Documentation Files" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ -d "docs/logicapps" ]; then
+          file_count=$(find docs/logicapps -name "*.md" | wc -l)
+          echo "- Total markdown files: $file_count" >> $GITHUB_STEP_SUMMARY
+          echo "- Documentation path: \`docs/logicapps/\`" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Status" >> $GITHUB_STEP_SUMMARY
+        if [ "${{ steps.check_changes.outputs.changes }}" == "true" ]; then
+          echo "✅ Changes detected - Pull request created" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "ℹ️ No changes detected - Documentation is up to date" >> $GITHUB_STEP_SUMMARY
+        fi

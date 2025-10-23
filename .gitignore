@@ -1,0 +1,74 @@
+# Exports - Logic Apps JSON files may contain sensitive data
+exports/
+*.export.json
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# PowerShell
+*.ps1~
+
+# Secrets and credentials (double check these are never committed)
+*.credentials
+*.secrets
+*.key
+secrets.json
+appsettings.local.json
+
+# Azure specific
+*.publishsettings
+*.azurePubxml
+
+# Backup files
+*.bak
+*.backup
+
+# Node modules (if any JS tooling is added)
+node_modules/
+
+# Python (if any Python scripts are added)
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+venv/
+ENV/
+
+# Sentinel tracking (already tracked in specific branch)
+.sentinel/
+
+# Local development
+local/
+.env
+.env.local
+
+# Build outputs
+build/
+dist/
+out/
+
+# Documentation that should be regenerated
+docs/logicapps/*.md
+!docs/logicapps/.gitkeep
+
+# Sensitive parameters files (containing connection strings, keys, etc.)
+*.parameters-*.json
+!*.parameters.example.json
