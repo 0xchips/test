@@ -140,12 +140,12 @@ function Get-TriggerTypeDisplayName {
     )
     
     $displayNames = @{
-        "Recurrence" = "⏰ Scheduled (Recurrence)"
-        "Request" = "🌐 HTTP Request"
-        "ApiConnection" = "🔌 API Connection"
+        "Recurrence"           = "⏰ Scheduled (Recurrence)"
+        "Request"              = "🌐 HTTP Request"
+        "ApiConnection"        = "🔌 API Connection"
         "ApiConnectionWebhook" = "🪝 Webhook"
-        "HttpWebhook" = "🪝 HTTP Webhook"
-        "Http" = "🌐 HTTP"
+        "HttpWebhook"          = "🪝 HTTP Webhook"
+        "Http"                 = "🌐 HTTP"
     }
     
     if ($displayNames.ContainsKey($Type)) {
@@ -163,20 +163,20 @@ function Get-ActionTypeDisplayName {
     )
     
     $displayNames = @{
-        "Http" = "🌐 HTTP Request"
-        "ApiConnection" = "🔌 API Connection"
-        "Compose" = "📝 Compose"
-        "InitializeVariable" = "💾 Initialize Variable"
-        "SetVariable" = "💾 Set Variable"
-        "IncrementVariable" = "➕ Increment Variable"
+        "Http"                  = "🌐 HTTP Request"
+        "ApiConnection"         = "🔌 API Connection"
+        "Compose"               = "📝 Compose"
+        "InitializeVariable"    = "💾 Initialize Variable"
+        "SetVariable"           = "💾 Set Variable"
+        "IncrementVariable"     = "➕ Increment Variable"
         "AppendToArrayVariable" = "📋 Append to Array"
-        "Condition" = "❓ Condition"
-        "Switch" = "🔀 Switch"
-        "Foreach" = "🔁 For Each"
-        "Until" = "🔁 Until"
-        "ParseJson" = "📄 Parse JSON"
-        "Response" = "↩️ Response"
-        "Terminate" = "🛑 Terminate"
+        "Condition"             = "❓ Condition"
+        "Switch"                = "🔀 Switch"
+        "Foreach"               = "🔁 For Each"
+        "Until"                 = "🔁 Until"
+        "ParseJson"             = "📄 Parse JSON"
+        "Response"              = "↩️ Response"
+        "Terminate"             = "🛑 Terminate"
     }
     
     if ($displayNames.ContainsKey($Type)) {
