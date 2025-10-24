@@ -5,20 +5,20 @@ on:
   # schedule:
   #   - cron: '0 8 * * 1'  # Run every Monday at 8 AM UTC (weekly)
   workflow_dispatch:
-    inputs:
-      resourceGroup:
-        description: 'Resource Group (leave empty for all)'
-        required: false
-        type: string
-        default: 'training_jordan'
-      subscriptionId:
-        description: 'Subscription ID (leave empty for default)'
-        required: false
-        type: string
-      logicAppName:
-        description: 'Specific Logic App name (leave empty for all)'
-        required: false
-        type: string
+    # inputs:
+    #   resourceGroup:
+    #     description: 'Resource Group (leave empty for all)'
+    #     required: false
+    #     type: string
+    #     default: 'training_jordan'
+    #   subscriptionId:
+    #     description: 'Subscription ID (leave empty for default)'
+    #     required: false
+    #     type: string
+    #   logicAppName:
+    #     description: 'Specific Logic App name (leave empty for all)'
+    #     required: false
+    #     type: string
 
 permissions:
   contents: write
