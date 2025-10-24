@@ -94,14 +94,14 @@ function Get-WorkflowRunHistory {
     try {
         $startTime = (Get-Date).AddDays(-$Days)
         $runs = Get-AzLogicAppRunHistory -ResourceGroupName $ResourceGroupName -Name $WorkflowName -ErrorAction Stop | 
-                Where-Object { $_.StartTime -gt $startTime }
+        Where-Object { $_.StartTime -gt $startTime }
         
         $stats = @{
             TotalRuns = $runs.Count
             Succeeded = ($runs | Where-Object { $_.Status -eq 'Succeeded' }).Count
-            Failed = ($runs | Where-Object { $_.Status -eq 'Failed' }).Count
+            Failed    = ($runs | Where-Object { $_.Status -eq 'Failed' }).Count
             Cancelled = ($runs | Where-Object { $_.Status -eq 'Cancelled' }).Count
-            Running = ($runs | Where-Object { $_.Status -eq 'Running' }).Count
+            Running   = ($runs | Where-Object { $_.Status -eq 'Running' }).Count
         }
         
         return $stats
@@ -126,10 +126,10 @@ function Get-WorkflowConnections {
         foreach ($connName in $connectionParams.PSObject.Properties.Name) {
             $conn = $connectionParams.$connName
             $connections += @{
-                Name = $connName
-                ConnectionId = $conn.connectionId
+                Name           = $connName
+                ConnectionId   = $conn.connectionId
                 ConnectionName = $conn.connectionName
-                Id = $conn.id
+                Id             = $conn.id
             }
         }
     }
@@ -150,8 +150,8 @@ function Get-TriggerInfo {
             $trigger = $WorkflowDefinition.definition.triggers.$triggerName
             
             $triggerInfo = @{
-                Name = $triggerName
-                Type = $trigger.type
+                Name       = $triggerName
+                Type       = $trigger.type
                 Recurrence = $null
                 Conditions = $null
             }
@@ -159,7 +159,7 @@ function Get-TriggerInfo {
             if ($trigger.recurrence) {
                 $triggerInfo.Recurrence = @{
                     Frequency = $trigger.recurrence.frequency
-                    Interval = $trigger.recurrence.interval
+                    Interval  = $trigger.recurrence.interval
                 }
             }
             
@@ -187,10 +187,10 @@ function Get-ActionInfo {
             $action = $WorkflowDefinition.definition.actions.$actionName
             
             $actionInfo = @{
-                Name = $actionName
-                Type = $action.type
+                Name     = $actionName
+                Type     = $action.type
                 RunAfter = $action.runAfter
-                Inputs = if ($action.inputs) { $action.inputs } else { $null }
+                Inputs   = if ($action.inputs) { $action.inputs } else { $null }
             }
             
             $actions += $actionInfo
@@ -231,11 +231,11 @@ foreach ($workflow in $workflows) {
     
     try {
         # Get full workflow definition
-        $workflowDef = Get-AzLogicApp -ResourceGroupName $workflow.ResourceGroupName -Name $workflow.Name
+        $workflowDef = Get-AzLogicApp -ResourceGroupName $ResourceGroupName -Name $workflow.Name
         
         # Get run history
         Write-LogInfo "  Retrieving run history (last $RunHistoryDays days)..."
-        $runStats = Get-WorkflowRunHistory -ResourceGroupName $workflow.ResourceGroupName -WorkflowName $workflow.Name -Days $RunHistoryDays
+        $runStats = Get-WorkflowRunHistory -ResourceGroupName $ResourceGroupName -WorkflowName $workflow.Name -Days $RunHistoryDays
         
         # Extract connections
         Write-LogInfo "  Extracting connections..."
@@ -247,27 +247,41 @@ foreach ($workflow in $workflows) {
         
         # Extract actions
         Write-LogInfo "  Extracting actions..."
+        
         $actions = Get-ActionInfo -WorkflowDefinition $workflowDef
         
+
+        # # Parse the resource group names
+        # foreach ($app in $logicApps) {
+        #     $ResourceGroupName = ($app.Id -split '/')[4]
+
+        #     if ($app.State -eq "Enabled") {
+        #         $runCounts += [PSCustomObject]@{
+        #             ResourceGroup = $ResourceGroupName
+        #         }
+        #     }
+        # }
+
+        $ResourceGroupName = ($workflow.Id -split '/')[4]
         # Build comprehensive Logic App information
         $logicAppInfo = @{
-            Name = $workflow.Name
-            ResourceGroupName = $workflow.ResourceGroupName
-            Location = $workflow.Location
-            State = $workflow.State
-            Id = $workflow.Id
-            CreatedTime = $workflow.CreatedTime
-            ChangedTime = $workflow.ChangedTime
-            Version = $workflow.Version
-            AccessEndpoint = $workflow.AccessEndpoint
-            Definition = $workflowDef.Definition
-            Parameters = $workflowDef.Parameters
-            Triggers = $triggers
-            Actions = $actions
-            Connections = $connections
-            RunHistory = $runStats
-            Tags = $workflow.Tags
-            ExportDate = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+            Name              = $workflow.Name
+            Location          = $workflow.Location
+            State             = $workflow.State
+            Id                = $workflow.Id
+            ResourceGroupName = $ResourceGroupName
+            CreatedTime       = $workflow.CreatedTime
+            ChangedTime       = $workflow.ChangedTime
+            Version           = $workflow.Version
+            AccessEndpoint    = $workflow.AccessEndpoint
+            Definition        = $workflowDef.Definition
+            Parameters        = $workflowDef.Parameters
+            Triggers          = $triggers
+            Actions           = $actions
+            Connections       = $connections
+            RunHistory        = $runStats
+            Tags              = $workflow.Tags
+            ExportDate        = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
         }
         
         # Save to JSON file
@@ -287,11 +301,11 @@ foreach ($workflow in $workflows) {
 
 # Create summary file
 $summary = @{
-    ExportDate = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    SubscriptionId = $SubscriptionId
+    ExportDate        = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    SubscriptionId    = $SubscriptionId
     ResourceGroupName = if ($ResourceGroupName) { $ResourceGroupName } else { "All" }
-    TotalLogicApps = $allLogicApps.Count
-    LogicApps = $allLogicApps | Select-Object Name, ResourceGroupName, State, Location
+    TotalLogicApps    = $allLogicApps.Count
+    LogicApps         = $allLogicApps | Select-Object Name, ResourceGroupName, State, Location
 }
 
 $summaryPath = Join-Path -Path $OutputPath -ChildPath "summary.json"
