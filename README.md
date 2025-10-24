@@ -43,6 +43,17 @@ This solution automatically:
 
 ### Manual Documentation Generation
 
+### login into your azure acount using powershell Az module
+```powershell
+Connect-AzAccount -UseDeviceAuthentication #if MFA enabled add -SubscriptionId '' -TenantId ''
+
+# to verifiy whether the authentication succeeded
+Get-AzContext 
+
+# to logout
+Disconnect-AzAccount
+```
+
 1. **Export Logic Apps from Azure:**
 
 ```powershell
